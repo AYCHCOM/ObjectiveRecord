@@ -25,7 +25,7 @@ static CWInflector* sharedInstance = nil;
 	{
 		[self release];
 	}
-	else if(self = sharedInstance = [[super init] retain])
+	else if((self = sharedInstance = [[super init] retain]))
 	{
 		plurals      = [NSMutableArray new];
 		singulars    = [NSMutableArray new];

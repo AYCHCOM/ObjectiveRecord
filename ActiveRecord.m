@@ -427,7 +427,8 @@
 
 + (id) build:(id)parameters withOptions:(NSDictionary *)options {
 
-	id resource;
+#warning "Make sure this method can return nil!!
+	id resource = nil;
 	
     if ([parameters isKindOfClass:self])
         return parameters;
