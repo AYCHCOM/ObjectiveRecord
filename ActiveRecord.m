@@ -35,10 +35,7 @@
 
 + (ActiveManager *) activeManager{
 	
-	ActiveManager *manager = [ActiveManager shared];
-	[manager.defaultDateParser setDateFormat:[self dateFormat]];
-	
-	return manager;
+	return [ActiveManager shared];
 }
 
 + (NSManagedObjectContext *) managedObjectContext {
@@ -113,8 +110,10 @@
             // For attributes, simply set the value
             if ([prop isKindOfClass:[NSAttributeDescription class]]) {
                 // Serialize dates if serializeDates is set
-                if ([value isKindOfClass:[NSDate class]] && serializeDates)
-                    value = [[[self class] activeManager].defaultDateParser stringFromDate:value];
+                if ([value isKindOfClass:[NSDate class]] && serializeDates){
+                    ActiveManager *manager = [[self class] activeManager];
+                    value = [[manager defaultDateParser] stringFromDate:value];
+                }
 								
                 [dict setObject:value forKey:key];
             }
@@ -389,7 +388,7 @@
     }
     else {
 		
-		ActiveRecord *resource = [[self alloc] initWithEntity:[self entityDescription] 
+		ActiveRecord *resource = [[self alloc] initWithEntity:[self entityDescription]
 							   insertIntoManagedObjectContext:[ActiveManager shared].managedObjectContext];
 		
 		NSMutableDictionary *dict	= [NSMutableDictionary dictionary];
@@ -655,9 +654,11 @@
             NSString *dictUpdatedAtString = [dict objectForKey:[[self class] updatedAtField]];
 			
             if (dictUpdatedAtString != nil) {
+                
+                ActiveManager *manager = [[self class] activeManager];
+                
+                NSDate *dictUpdatedAt = [[manager defaultDateParser] dateFromString:[self dateFormatPreprocessor:dictUpdatedAtString]];
 				
-                NSDate *dictUpdatedAt = [[[self class] activeManager].defaultDateParser dateFromString:[self dateFormatPreprocessor:dictUpdatedAtString]];
-
                 if (updatedAt != nil) {
                     return [updatedAt compare:dictUpdatedAt] == NSOrderedAscending;
                 }
