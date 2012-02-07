@@ -34,6 +34,7 @@
             [obj performSelector:@selector(setIndex:) withObject:[NSNumber numberWithInt:i]];
         }
         [self addObject:obj];
+		[obj release];
     }
 }
 
