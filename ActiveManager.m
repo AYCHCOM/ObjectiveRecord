@@ -109,32 +109,63 @@ static ActiveManager *_shared = nil;
 }
 
 - (void) addRequest:(ActiveRequest *) request toQueue:(dispatch_queue_t)queue didParseObjectBlock:(ActiveConnectionDidParseObjectBlock)didParseObjectBlock didFinishBlock:(ActiveConnectionBlock)didFinishBlock didFailBlock:(ActiveConnectionBlock)didFailBlock{
-	
-	if([request.urlPath rangeOfString:@"http"].length == 0)
+	[self addRequest:request toRequestQueue:queue blockQueue:queue didParseObjectBlock:didParseObjectBlock didFinishBlock:didFinishBlock didFailBlock:didFailBlock];
+}
+
+- (void)addRequest:(ActiveRequest *)request toRequestQueue:(dispatch_queue_t)queue blockQueue:(dispatch_queue_t)blockQueue didParseObjectBlock:(ActiveConnectionDidParseObjectBlock)didParseObjectBlock didFinishBlock:(ActiveConnectionBlock)didFinishBlock didFailBlock:(ActiveConnectionBlock)didFailBlock
+{
+	if ([request.urlPath rangeOfString:@"http"].length == 0) {
 		[self addBaseURL:request];
-    
-    if(dispatch_get_current_queue() == queue){
-        
-        NSObject <ActiveConnection> *conn = [[_connectionClass alloc] init];
-        [conn setResponseDelegate:request.delegate];
-        [conn setDidFailBlock:didFailBlock];
-        [conn setDidFinishBlock:didFinishBlock];
-        [conn setDidParseObjectBlock:didParseObjectBlock];
-        
+	}
+	
+	//Create failure, finish and parsed object blocks to call back on the blockQueue.
+	ActiveConnectionBlock failureBlock = ^(ActiveResult *result) {
+		if (didFailBlock) {
+			dispatch_async(blockQueue, ^{
+				didFailBlock(result);
+			});
+		}
+	};
+	
+	ActiveConnectionBlock finishBlock = ^(ActiveResult *result) {
+		if (didFinishBlock) {
+			dispatch_async(blockQueue, ^{
+				didFinishBlock(result);
+			});
+		}
+	};
+	
+	ActiveConnectionDidParseObjectBlock parsedBlock = ^(id object) {
+		if (didParseObjectBlock) {
+			dispatch_async(blockQueue, ^{
+				didParseObjectBlock(object);
+			});
+		}
+	};
+	
+	//If we're already on the correct queue, just use it
+    if (dispatch_get_current_queue() == queue) {
+		//Create the actual request
+		NSObject <ActiveConnection> *conn = [[_connectionClass alloc] init];
+		[conn setResponseDelegate:request.delegate];
+		[conn setDidFailBlock:failureBlock];
+		[conn setDidFinishBlock:finishBlock];
+		[conn setDidParseObjectBlock:parsedBlock];
         [conn send:request];
-        [conn release];
+		[conn release];
     }
-	else
+	else {
         dispatch_async(queue, ^{
-                            
-            id <ActiveConnection> conn = [[[_connectionClass alloc] init] autorelease];
-            [conn setResponseDelegate:request.delegate];
-            [conn setDidFailBlock:didFailBlock];
-            [conn setDidFinishBlock:didFinishBlock];
-            [conn setDidParseObjectBlock:didParseObjectBlock];
-            
+			//Create the actual request
+			NSObject <ActiveConnection> *conn = [[_connectionClass alloc] init];
+			[conn setResponseDelegate:request.delegate];
+			[conn setDidFailBlock:failureBlock];
+			[conn setDidFinishBlock:finishBlock];
+			[conn setDidParseObjectBlock:parsedBlock];
             [conn send:request];
+			[conn release];
         });
+	}
 }
 
 - (ActiveResult *) addSyncronousRequest:(ActiveRequest *)request{
