@@ -611,8 +611,27 @@
 							break;
 						case NSStringAttributeType:
 							
-							if([value isKindOfClass:[NSString class]])
+							if([value isKindOfClass:[NSString class]]){
                                 [threadSafeSelf setValue:[value unescapeFromHTML] forKey:localField];
+							}
+							
+							//Our JSON parsing parses strings into arrays. This framework does not deal with that properly if a relationship is not set up. Manually deal with this.
+							else if ([value isKindOfClass:[NSArray class]]){
+								NSMutableString* str = [NSMutableString new];
+								for(NSDictionary* dictionary in ((NSArray*)value)){
+									for(NSString* key in [dictionary allKeys]){
+										NSString* val = [[dictionary objectForKey:key] stringByReplacingOccurrencesOfString:@"," withString:@""];
+										val = [val stringByReplacingOccurrencesOfString:@"|" withString:@""];
+										[str appendString:[NSString stringWithFormat:@"%@,%@|", key, val]];
+									}
+									
+								}
+								if(str.length > 0){
+									str = [[str substringToIndex:str.length-1] mutableCopy];
+								}
+								[threadSafeSelf setValue:str forKey:localField];
+							}
+							
                             else                       
                                 [threadSafeSelf setValue:[[[self class] activeManager].defaultNumberFormatter stringFromNumber:value] forKey:localField];
 							
