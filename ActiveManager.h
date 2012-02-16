@@ -60,6 +60,7 @@
 - (void) addRequest:(ActiveRequest *) request delegate:(id) delegate didParseObjectSelector:(SEL)didParseObjectSelector didFinishSelector:(SEL)didFinishSelector didFailSelector:(SEL)didFailSelector;
 - (void) addRequest:(ActiveRequest *) request didParseObjectBlock:(ActiveConnectionDidParseObjectBlock)didParseObjectBlock didFinishBlock:(ActiveConnectionBlock)didFinishBlock didFailBlock:(ActiveConnectionBlock)didFailBlock;
 - (void) addRequest:(ActiveRequest *) request toQueue:(dispatch_queue_t)queue didParseObjectBlock:(ActiveConnectionDidParseObjectBlock)didParseObjectBlock didFinishBlock:(ActiveConnectionBlock)didFinishBlock didFailBlock:(ActiveConnectionBlock)didFailBlock;
+- (void) addRequest:(ActiveRequest *) request toQueue:(dispatch_queue_t)queue group:(dispatch_group_t)group didParseObjectBlock:(ActiveConnectionDidParseObjectBlock)didParseObjectBlock didFinishBlock:(ActiveConnectionBlock)didFinishBlock didFailBlock:(ActiveConnectionBlock)didFailBlock;
 
 - (ActiveResult *) addSyncronousRequest:(ActiveRequest *)request;
 - (void) addSyncronousRequest:(ActiveRequest *)request delegate:(id) delegate didFinishSelector:(SEL)didFinishSelector didFailSelector:(SEL)didFailSelector;

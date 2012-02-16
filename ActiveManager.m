@@ -108,14 +108,19 @@ static ActiveManager *_shared = nil;
 	[self addRequest:request toQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0) didParseObjectBlock:didParseObjectBlock didFinishBlock:didFinishBlock didFailBlock:didFailBlock];
 }
 
-- (void) addRequest:(ActiveRequest *) request toQueue:(dispatch_queue_t)queue didParseObjectBlock:(ActiveConnectionDidParseObjectBlock)didParseObjectBlock didFinishBlock:(ActiveConnectionBlock)didFinishBlock didFailBlock:(ActiveConnectionBlock)didFailBlock{
-	
-	if([request.urlPath rangeOfString:@"http"].length == 0)
+- (void) addRequest:(ActiveRequest *) request toQueue:(dispatch_queue_t)queue didParseObjectBlock:(ActiveConnectionDidParseObjectBlock)didParseObjectBlock didFinishBlock:(ActiveConnectionBlock)didFinishBlock didFailBlock:(ActiveConnectionBlock)didFailBlock
+{
+	[self addRequest:request toQueue:queue group:nil didParseObjectBlock:didParseObjectBlock didFinishBlock:didFinishBlock didFailBlock:didFailBlock];
+}
+
+- (void) addRequest:(ActiveRequest *) request toQueue:(dispatch_queue_t)queue group:(dispatch_group_t)group didParseObjectBlock:(ActiveConnectionDidParseObjectBlock)didParseObjectBlock didFinishBlock:(ActiveConnectionBlock)didFinishBlock didFailBlock:(ActiveConnectionBlock)didFailBlock
+{	
+	if ([request.urlPath rangeOfString:@"http"].length == 0) {
 		[self addBaseURL:request];
-    
-    if(dispatch_get_current_queue() == queue){
-        
-        NSObject <ActiveConnection> *conn = [[_connectionClass alloc] init];
+	}
+	
+	dispatch_block_t block = ^{
+		NSObject <ActiveConnection> *conn = [[_connectionClass alloc] init];
         [conn setResponseDelegate:request.delegate];
         [conn setDidFailBlock:didFailBlock];
         [conn setDidFinishBlock:didFinishBlock];
@@ -123,18 +128,17 @@ static ActiveManager *_shared = nil;
         
         [conn send:request];
         [conn release];
+	};
+	
+	if (group) {
+		dispatch_group_async(group, queue, block);
+	}
+	else if (dispatch_get_current_queue() == queue) {
+        block();
     }
-	else
-        dispatch_async(queue, ^{
-                            
-            id <ActiveConnection> conn = [[[_connectionClass alloc] init] autorelease];
-            [conn setResponseDelegate:request.delegate];
-            [conn setDidFailBlock:didFailBlock];
-            [conn setDidFinishBlock:didFinishBlock];
-            [conn setDidParseObjectBlock:didParseObjectBlock];
-            
-            [conn send:request];
-        });
+	else {
+        dispatch_async(queue, block);
+	}
 }
 
 - (ActiveResult *) addSyncronousRequest:(ActiveRequest *)request{
@@ -224,22 +228,28 @@ static ActiveManager *_shared = nil;
 	[self performSelectorOnMainThread:@selector(managedObjectContextDidSave:) withObject:notification waitUntilDone:YES];
 }
 
-- (NSManagedObjectContext*) newManagedObjectContext{
+- (NSManagedObjectContext*) newManagedObjectContext
+{	
+	NSManagedObjectContext *moc = nil;
+	if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 5.0f) {
+		moc = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
+	}
+	else {
+		moc = [[NSManagedObjectContext alloc] init];	
+	}
 	
-	NSManagedObjectContext *moc = [[NSManagedObjectContext alloc] init];
 	[moc setPersistentStoreCoordinator:self.persistentStoreCoordinator];
 	[moc setUndoManager:nil];
 	[moc setMergePolicy:NSOverwriteMergePolicy];
     
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(mergeChanges:)
-                                                 name:NSManagedObjectContextDidSaveNotification
-                                               object:moc];
-		
+	//Start observing this Managed Object Context
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(mergeChanges:) name:NSManagedObjectContextDidSaveNotification object:moc];
+	
 	return moc;
 }
 
-- (NSManagedObjectContext*) managedObjectContext {
-	
+- (NSManagedObjectContext*) managedObjectContext
+{	
 	if ([NSThread isMainThread]) {
 		return _managedObjectContext;
 		
