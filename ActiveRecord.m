@@ -691,18 +691,17 @@
 #pragma mark -
 #pragma mark Remove
 
-+ (void) removeAll{
-
++ (void) removeAll
+{
 	[self remove:nil];
-	//[self save];
+	[self save];
 }
 
-+ (void) remove:(NSPredicate *) predicate{
-	
++ (void) remove:(NSPredicate *)predicate
+{
 	ActiveResult *results = [self find:predicate];
 	
-	for(id row in [results objects]){
-		
+ 	for (id row in [results objects]) {
 		[row remove];
 	}
 }
