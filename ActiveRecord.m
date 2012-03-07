@@ -21,9 +21,14 @@
 #pragma mark -
 #pragma mark Utilities
 
-+ (void) save{
-	
-	[[self activeManager].managedObjectContext save];
++ (void)save
+{	
+	@try {
+		[[self activeManager].managedObjectContext save];
+	}
+	@catch (NSException *e) {
+		NSLog(@"Failed to save: %@", e);
+	}
 }
 
 - (ActiveRecord *) save{
@@ -479,16 +484,19 @@
 	NSMutableDictionary *dict	= [NSMutableDictionary dictionary];
 	NSDictionary *map			= [threadSafeSelf map];
 		
-	for(NSString *key in [data keyEnumerator]){
-
+	for (NSString *key in [data keyEnumerator]) {
 		NSString *mappedKey = [[map allKeys] indexOfObject:key] == NSNotFound ? key : [map objectForKey:key];
-		[dict setObject:[data objectForKey:key] forKey:[mappedKey stringByReplacingOccurrencesOfString:@"-" withString:@"_"]];
+		id object = [data objectForKey:key];
+		NSString *newKey = [mappedKey stringByReplacingOccurrencesOfString:@"-" withString:@"_"];
+		if (object && newKey) {
+			[dict setObject:object forKey:newKey];
+		}
+		else {
+			NSLog(@"Failed to update with data due to key / object: %@, %@", key, object);
+		}
 	}
-    
-	//[threadSafeSelf willUpdate:options data:dict];
 			
-    for (NSString *field in [dict allKeys]) {
-		
+    for (NSString *field in [dict allKeys]) {	
         NSString *localField = nil;
         if ([field isEqualToString:[[threadSafeSelf class] remoteIDField]])
             localField = [[threadSafeSelf class] localIDField];
