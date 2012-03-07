@@ -21,9 +21,14 @@
 #pragma mark -
 #pragma mark Utilities
 
-+ (void) save{
-	
-	[[self activeManager].managedObjectContext save];
++ (void)save
+{	
+	@try {
+		[[self activeManager].managedObjectContext save];
+	}
+	@catch (NSException *e) {
+		NSLog(@"Failed to save: %@", e);
+	}
 }
 
 - (ActiveRecord *) save{
