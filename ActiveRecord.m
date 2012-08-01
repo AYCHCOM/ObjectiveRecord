@@ -624,20 +624,24 @@
 							}
 							
 							//Our JSON parsing parses strings into arrays. This framework does not deal with that properly if a relationship is not set up. Manually deal with this.
-							else if ([value isKindOfClass:[NSArray class]]){
-								NSMutableString* str = [NSMutableString new];
-								for(NSDictionary* dictionary in ((NSArray*)value)){
-									for(NSString* key in [dictionary allKeys]){
-										NSString* val = [[dictionary objectForKey:key] stringByReplacingOccurrencesOfString:@"," withString:@""];
-										val = [val stringByReplacingOccurrencesOfString:@"|" withString:@""];
-										[str appendString:[NSString stringWithFormat:@"%@,%@|", key, val]];
+							else if ([value isKindOfClass:[NSArray class]]) {
+								//This is fairly ghetto. We're going to try to prevent any mishaps from now on here.
+								@try {
+									NSMutableString *optionsString = [NSMutableString new];
+									for (NSDictionary* dictionary in ((NSArray*)value)) {
+										NSString *name = [dictionary objectForKey:@"name"];
+										name = [name stringByReplacingOccurrencesOfString:@"," withString:@""];
+										name = [name stringByReplacingOccurrencesOfString:@"|" withString:@""];
+										[optionsString appendString:[NSString stringWithFormat:@"%@,%@|", @"name", name]];
 									}
-									
+									if (optionsString.length > 0) {
+										optionsString = [[optionsString substringToIndex:optionsString.length-1] mutableCopy];
+									}
+									[threadSafeSelf setValue:optionsString forKey:localField];
 								}
-								if(str.length > 0){
-									str = [[str substringToIndex:str.length-1] mutableCopy];
+								@catch (NSException *e) {
+									NSLog(@"Preventing error: %@", e);
 								}
-								[threadSafeSelf setValue:str forKey:localField];
 							}
 							
                             else                       
